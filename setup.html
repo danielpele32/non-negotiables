@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Claves de notificaciones</title>
+<meta name="color-scheme" content="dark">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600;700&display=swap">
+<style>
+:root{--bg:#0A0B0D;--panel:#121418;--line:#343943;--fg:#ECE8E1;--muted:#8C919A;--bronze:#C9883B;--hi:#EDB36A;--bad:#C2553F}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 "Barlow",system-ui,sans-serif;padding:24px max(16px,env(safe-area-inset-left,0px))}
+main{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1{font:400 40px/1 "Bebas Neue",Impact,sans-serif;letter-spacing:.04em;margin:0}
+h1 span{color:var(--bronze)}
+p{margin:0;color:var(--muted)}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
+label{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+textarea{width:100%;box-sizing:border-box;min-height:74px;background:#181B20;color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:10px;font:12px ui-monospace,Menlo,Consolas,monospace;resize:vertical}
+button{font:inherit;font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:13px;border:0;border-radius:10px;padding:14px;cursor:pointer;background:var(--bronze);color:#16110A}
+button.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+.warn{color:var(--hi);font-weight:600}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+</style>
+</head>
+<body>
+<main>
+  <h1>CLAVES DE <span>NOTIFICACIONES</span></h1>
+  <p>Esta página crea tus dos claves en tu propio navegador. No se envían a ningún sitio. Genéralas una sola vez y guárdalas.</p>
+  <button id="gen">Generar mis claves</button>
+  <div class="box" id="out" hidden>
+    <label for="pub">1 · Clave pública → secreto VAPID_PUBLIC y también en config.js</label>
+    <textarea id="pub" readonly></textarea>
+    <button class="ghost" data-copy="pub">Copiar clave pública</button>
+    <label for="priv">2 · Clave privada → solo en el secreto VAPID_PRIVATE</label>
+    <textarea id="priv" readonly></textarea>
+    <button class="ghost" data-copy="priv">Copiar clave privada</button>
+    <p class="warn">No compartas la clave privada con nadie y no la pongas en config.js.</p>
+  </div>
+</main>
+<script>
+const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+document.getElementById('gen').addEventListener('click', async () => {
+  try {
+    const kp = await crypto.subtle.generateKey({ name:'ECDSA', namedCurve:'P-256' }, true, ['sign','verify']);
+    const pub = await crypto.subtle.exportKey('raw', kp.publicKey);
+    const jwk = await crypto.subtle.exportKey('jwk', kp.privateKey);
+    document.getElementById('pub').value = b64u(pub);
+    document.getElementById('priv').value = jwk.d;
+    document.getElementById('out').hidden = false;
+    document.getElementById('gen').textContent = 'Generar otras claves';
+  } catch (e) { alert('Este navegador no puede generar las claves. Abre esta página en Chrome o Safari actualizados.'); }
+});
+document.addEventListener('click', async e => {
+  const id = e.target.dataset && e.target.dataset.copy; if (!id) return;
+  const t = document.getElementById(id);
+  try { await navigator.clipboard.writeText(t.value); e.target.textContent = 'Copiada ✓'; }
+  catch (err) { t.select(); e.target.textContent = 'Selecciónala y copia'; }
+});
+</script>
+</body>
+</html>
